@@ -3,7 +3,16 @@
 Demo para que el cliente chatee con el agente de IA desde cualquier navegador, sin cuenta de Claude. La página muestra el chat a la izquierda y, a la derecha, cómo se mueve la oportunidad en el pipeline de GoHighLevel.
 
 - `index.html`: la página (chat, pipeline, demo guiada y tarifario editable).
-- `api/chat.js`: función de servidor que llama a Claude con la clave guardada en Vercel. La clave nunca llega al navegador.
+- `lib/agent.js`: el agente. Llama a Claude con la clave guardada en el servidor; la clave nunca llega al navegador.
+- `netlify/functions/chat.mjs` y `api/chat.js`: la entrada para Netlify y para Vercel. Sirve cualquiera de los dos.
+
+## Publicarlo en Netlify (unos 10 minutos)
+
+1. Crea una clave en https://console.anthropic.com → API Keys. Carga saldo y pon un límite de gasto mensual.
+2. En https://app.netlify.com → **Add new site → Import an existing project** → GitHub → `n8n_sevamo`.
+3. **Branch to deploy:** `claude/whatsapp-automation-agent-jctnmn`. **Base directory:** `demos/jm-tours-whatsapp`. Deja vacío el build command; `netlify.toml` ya dice qué publicar.
+4. En **Environment variables** agrega `ANTHROPIC_API_KEY` y `DEMO_CODE` (y `CLAUDE_MODEL` si quieres otro modelo).
+5. **Deploy**. Te queda un enlace tipo `jm-tours-demo.netlify.app`.
 
 ## Publicarlo en Vercel (unos 10 minutos)
 
