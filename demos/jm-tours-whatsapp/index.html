@@ -1,0 +1,514 @@
+<title>Simulador WhatsApp JM Tours</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: phone-style chat on the left, the team's CRM view on the right; stacks on phones. */
+:root {
+  --bg: #eef2ee;
+  --surface: #ffffff;
+  --ink: #1b2620;
+  --muted: #5d6b63;
+  --line: #d5ddd7;
+  --accent: #1f6b4a;        /* cafetal green */
+  --accent-soft: #e2f0e8;
+  --coffee: #7a4a2b;
+  --chat-bg: #e7ece6;
+  --bubble-in: #ffffff;
+  --bubble-out: #d6efdc;
+  --bubble-agent: #efe6fb;
+  --agent: #6a3fb0;
+  --warn: #b5680f;
+  --warn-soft: #fbf0e0;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111814; --surface: #19221d; --ink: #e5ece7; --muted: #9aa9a0; --line: #2c3832;
+    --accent: #5fbf8f; --accent-soft: #1d3428; --coffee: #d29a73;
+    --chat-bg: #0f1612; --bubble-in: #1f2a24; --bubble-out: #1f4433; --bubble-agent: #2e2445; --agent: #b99af0;
+    --warn: #e7a24f; --warn-soft: #3a2b18;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111814; --surface: #19221d; --ink: #e5ece7; --muted: #9aa9a0; --line: #2c3832;
+  --accent: #5fbf8f; --accent-soft: #1d3428; --coffee: #d29a73;
+  --chat-bg: #0f1612; --bubble-in: #1f2a24; --bubble-out: #1f4433; --bubble-agent: #2e2445; --agent: #b99af0;
+  --warn: #e7a24f; --warn-soft: #3a2b18;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 16px; }
+header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; }
+h1 { font-family: var(--font-display); font-size: clamp(22px, 3.2vw, 30px); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 60ch; }
+.badge { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 4px 10px; border-radius: 999px; font-weight: 600; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; font-weight: 500; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Chat */
+.phone { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; height: 680px; max-height: 80vh; min-width: 0; }
+.phone-head { display: flex; gap: 10px; align-items: center; padding: 12px 14px; background: var(--accent); color: #fff; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; background: #fff; color: var(--accent); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 14px; flex: none; }
+.phone-head b { display: block; font-weight: 600; }
+.phone-head small { opacity: .85; }
+.chat { flex: 1; overflow-y: auto; padding: 14px 12px; background: var(--chat-bg); display: flex; flex-direction: column; gap: 6px; }
+.msg { max-width: 82%; padding: 7px 10px 5px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 1px 0 rgba(0,0,0,.06); }
+.msg .meta { display: block; text-align: right; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.msg.cliente { align-self: flex-end; background: var(--bubble-out); }
+.msg.bot { align-self: flex-start; background: var(--bubble-in); }
+.msg.asesor { align-self: flex-start; background: var(--bubble-agent); }
+.msg .who { display: block; font-size: 12px; font-weight: 600; margin-bottom: 2px; color: var(--accent); }
+.msg.asesor .who { color: var(--agent); }
+.sys { align-self: center; font-size: 12px; color: var(--muted); background: var(--surface); border-radius: 8px; padding: 4px 10px; text-align: center; max-width: 90%; }
+.sys button.inline { margin-top: 6px; font-size: 12px; padding: 4px 10px; border-radius: 999px; }
+.typing { align-self: flex-start; background: var(--bubble-in); border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: 13px; }
+.chips { display: flex; gap: 6px; padding: 8px 10px 0; overflow-x: auto; background: var(--surface); }
+.chips button { white-space: nowrap; font-size: 13px; padding: 5px 10px; border-radius: 999px; }
+.composer { padding: 8px 10px 10px; background: var(--surface); display: grid; gap: 6px; }
+.as { display: flex; gap: 4px; font-size: 12px; color: var(--muted); align-items: center; }
+.as button { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+.as button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.as button.agent[aria-pressed="true"] { background: var(--bubble-agent); border-color: var(--agent); }
+.row { display: flex; gap: 6px; }
+.row input { flex: 1; min-width: 0; font: inherit; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+
+/* CRM */
+.crm { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 18px; min-width: 0; }
+.crm h2 { font-family: var(--font-display); font-size: 18px; margin: 0; }
+.crm h3 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+.pipe-wrap { overflow-x: auto; }
+.pipe { display: grid; grid-template-columns: repeat(5, minmax(112px, 1fr)); gap: 8px; min-width: 580px; }
+.col { border: 1px dashed var(--line); border-radius: 10px; padding: 8px; min-height: 108px; }
+.col .name { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.col.on { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+.col.on .name { color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 13px; animation: pop .35s ease; }
+.card b { display: block; }
+.card .val { font-family: var(--font-mono); font-size: 12px; color: var(--coffee); }
+@keyframes pop { from { transform: translateY(6px); opacity: .3; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 560px) { .two { grid-template-columns: minmax(0, 1fr); } }
+dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; font-size: 14px; }
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+dd.empty { color: var(--muted); font-weight: 400; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-family: var(--font-mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--ink); }
+.tag.hot { background: var(--warn-soft); color: var(--warn); }
+.tag.human { background: var(--bubble-agent); color: var(--agent); }
+.status { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft); }
+.status.human { background: var(--bubble-agent); }
+ol.log { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
+ol.log li { font-size: 13px; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; }
+ol.log time { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+details { border-top: 1px solid var(--line); padding-top: 12px; }
+summary { cursor: pointer; font-weight: 600; }
+textarea { width: 100%; min-height: 180px; font: 13px/1.5 var(--font-mono); padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin-top: 8px; }
+.note { font-size: 13px; color: var(--muted); }
+.notice .row { margin-top: 8px; }
+.notice { display: grid; font-size: 13px; padding: 8px 12px; border-radius: 10px; background: var(--warn-soft); color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="badge">Simulador de demostración</span>
+      <h1>Así atendería WhatsApp el agente de JM Tours</h1>
+      <p class="sub">Escribe como si fueras un turista: responde el agente con IA. A la izquierda responde el agente; a la derecha ves lo que el equipo ve en GoHighLevel en tiempo real. Los precios son de ejemplo.</p>
+    </div>
+    <div class="controls">
+      <button class="primary" id="btnDemo" type="button">Ver demo guiada</button>
+      <button id="btnReset" type="button">Reiniciar</button>
+    </div>
+  </header>
+
+  <form class="notice" id="codeBox" hidden>
+    <label for="codeInput">Escribe el código de acceso que te dio SeVam para chatear con el agente:</label>
+    <div class="row"><input id="codeInput" type="text" autocomplete="off"><button class="primary" type="submit">Entrar</button></div>
+  </form>
+
+  <div class="grid">
+    <section class="phone" aria-label="Chat simulado">
+      <div class="phone-head">
+        <div class="avatar" aria-hidden="true">JM</div>
+        <div><b>JM Tours del Quindío</b><small id="headStatus">Asistente virtual · responde 24/7</small></div>
+      </div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="chips" aria-label="Mensajes de ejemplo">
+        <button type="button" data-say="Hola, quiero información del Valle del Cocora (REF-COCORA)">Llega desde la landing</button>
+        <button type="button" data-say="Buenas, ¿cuánto vale un tour para 15 personas de una empresa?">Grupo de 15</button>
+        <button type="button" data-say="Hi! Do you have coffee tours in English?">In English</button>
+        <button type="button" data-say="Uy, está muy caro">Está caro</button>
+        <button type="button" data-say="Quiero hablar con una persona">Pedir un asesor</button>
+      </div>
+      <form class="composer" id="composer">
+        <div class="as" role="group" aria-label="Escribes como">
+          Escribes como:
+          <button type="button" id="asCliente" aria-pressed="true">Cliente</button>
+          <button type="button" id="asAsesor" class="agent" aria-pressed="false">Asesor</button>
+        </div>
+        <div class="row">
+          <input id="msgInput" type="text" autocomplete="off" placeholder="Escribe un mensaje" aria-label="Mensaje">
+          <button class="primary" type="submit" id="btnSend">Enviar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="crm" aria-label="Vista del equipo en GoHighLevel">
+      <h2>Lo que ve el equipo en GoHighLevel</h2>
+      <div>
+        <h3>Pipeline · Reservas WhatsApp</h3>
+        <div class="pipe-wrap"><div class="pipe" id="pipe"></div></div>
+      </div>
+      <div class="status" id="botStatus">El bot atiende este chat.</div>
+      <div class="two">
+        <div>
+          <h3>Contacto</h3>
+          <dl id="fields"></dl>
+        </div>
+        <div>
+          <h3>Etiquetas</h3>
+          <div class="tags" id="tags"></div>
+        </div>
+      </div>
+      <div>
+        <h3>Acciones del equipo</h3>
+        <div class="actions">
+          <button type="button" id="btnPay">Confirmar pago del anticipo</button>
+          <button type="button" id="btnFollow">Pasan 2 horas sin respuesta</button>
+          <button type="button" id="btnBack">Devolver el chat al bot</button>
+        </div>
+      </div>
+      <div>
+        <h3>Automatizaciones</h3>
+        <ol class="log" id="log"></ol>
+      </div>
+      <details>
+        <summary>Tarifario que usa el agente</summary>
+        <p class="note">Precios de ejemplo. Reemplázalos por los reales y el agente cotizará con ellos en la prueba libre.</p>
+        <textarea id="tarifario" aria-label="Tarifario"></textarea>
+      </details>
+    </section>
+  </div>
+</div>
+
+<script>
+const STAGES = ["Nuevo", "Calificado", "Cotizado", "Anticipo pagado", "Tour realizado"];
+const DEFAULT_TARIFARIO = `PRECIOS DE EJEMPLO (COP, por persona)
+REF-COCORA · Valle del Cocora + Salento · día completo · adulto 180.000 · niño (4-11) 140.000 · incluye transporte desde hotel en Armenia o Salento, guía y entrada al valle.
+REF-CAFE · Tour de café en finca · medio día · adulto 150.000 · niño 110.000 · incluye transporte, recorrido por la finca, cata de café.
+REF-COMBO · Cocora + Café · 2 días · adulto 320.000 · niño 240.000 · incluye todo lo anterior.
+Adicional: almuerzo típico 35.000 por persona.
+Anticipo para reservar: 50 %. Grupos de 8 o más y empresas: los atiende un asesor.
+Tours en inglés: sí, con guía bilingüe, sin recargo.`;
+const FIELD_LABELS = [["nombre","Nombre"],["tour","Tour de interés"],["fecha","Fecha del tour"],["adultos","Adultos"],["ninos","Niños"],["hospedaje","Hospedaje"],["total_cop","Valor cotizado"],["idioma","Idioma"]];
+
+let state, demoTimer = null, busy = false, sender = "cliente";
+
+function fresh() {
+  return { msgs: [], stage: -1, fields: {}, tags: [], log: [], human: false };
+}
+const $ = id => document.getElementById(id);
+const now = () => new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+const cop = n => "$" + Number(n).toLocaleString("es-CO") + " COP";
+
+function loadTarifario() {
+  let t = null;
+  try { t = localStorage.getItem("jm-tarifario"); } catch (e) {}
+  $("tarifario").value = t || DEFAULT_TARIFARIO;
+}
+$("tarifario").addEventListener("input", () => {
+  try { localStorage.setItem("jm-tarifario", $("tarifario").value); } catch (e) {}
+});
+
+/* ---------- state changes ---------- */
+function addMsg(who, text) { state.msgs.push({ who, text, t: now() }); render(); }
+function sys(text, action) { state.msgs.push({ who: "sys", text, action }); render(); }
+function log(text) { state.log.unshift({ t: now(), text }); render(); }
+function tag(t) { if (!state.tags.includes(t)) { state.tags.push(t); } }
+function untag(t) { state.tags = state.tags.filter(x => x !== t); }
+function setStage(i, why) {
+  if (i <= state.stage) return;
+  state.stage = i;
+  log(`Oportunidad movida a “${STAGES[i]}”` + (why ? ` · ${why}` : ""));
+  if (i === 2) log("Workflow “Seguimiento de cotización” programado: 2 h, 22 h y 72 h");
+}
+function setFields(f) {
+  for (const [k, v] of Object.entries(f || {})) {
+    if (v !== null && v !== undefined && v !== "" && !(k === "total_cop" && !Number(v))) state.fields[k] = v;
+  }
+  if (Number(state.fields.adultos) >= 8 && !state.tags.includes("lead-caliente")) {
+    tag("lead-caliente"); log("Lead caliente: grupo grande · notificación al celular del asesor");
+  }
+}
+function toHuman(reason) {
+  if (state.human) return;
+  state.human = true; tag("humano");
+  log(`Paso a asesor: ${reason} · notificación enviada a Laura (asesora)`);
+  sys("El bot se pausó y avisó a la asesora. En la vida real aquí escribe una persona: usa “Escribes como: Asesor” o devuelve el chat al bot para seguir la prueba.", "back");
+}
+function detectRef(text) {
+  const m = text.match(/REF-([A-Z]+)/i);
+  if (m && !state.tags.some(t => t.startsWith("sitio:"))) {
+    tag("fuente:landing"); tag("sitio:" + m[1].toLowerCase());
+    log(`Workflow “Origen”: llegó por el botón ${m[0].toUpperCase()} de la landing`);
+  }
+}
+function firstContact() {
+  if (state.stage < 0) {
+    if (!state.tags.some(t => t.startsWith("fuente:"))) tag("fuente:google-ads");
+    setStage(0, "primer mensaje");
+  }
+}
+
+/* ---------- render ---------- */
+function render() {
+  const chat = $("chat"); chat.textContent = "";
+  for (const m of state.msgs) {
+    const el = document.createElement("div");
+    if (m.who === "sys") {
+      el.className = "sys"; el.textContent = m.text;
+      if (m.action && m === state.msgs.at(-1)) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "inline"; b.dataset.action = m.action;
+        b.textContent = m.action === "back" ? "Devolver el chat al bot" : "Reintentar respuesta";
+        el.append(document.createElement("br"), b);
+      }
+      chat.append(el); continue;
+    }
+    el.className = "msg " + m.who;
+    if (m.who !== "cliente") {
+      const w = document.createElement("span"); w.className = "who";
+      w.textContent = m.who === "bot" ? "Sofía · asistente virtual" : "Laura · asesora";
+      el.append(w);
+    }
+    el.append(document.createTextNode(m.text));
+    const meta = document.createElement("span"); meta.className = "meta"; meta.textContent = m.t; el.append(meta);
+    chat.append(el);
+  }
+  if (busy) { const t = document.createElement("div"); t.className = "typing"; t.textContent = "Sofía está escribiendo…"; chat.append(t); }
+  chat.scrollTop = chat.scrollHeight;
+
+  const pipe = $("pipe"); pipe.textContent = "";
+  STAGES.forEach((s, i) => {
+    const c = document.createElement("div"); c.className = "col" + (i === state.stage ? " on" : "");
+    const n = document.createElement("div"); n.className = "name"; n.textContent = s; c.append(n);
+    if (i === state.stage) {
+      const card = document.createElement("div"); card.className = "card";
+      const b = document.createElement("b"); b.textContent = state.fields.nombre || "Contacto WhatsApp"; card.append(b);
+      const t = document.createElement("div"); t.textContent = state.fields.tour || "Sin tour aún"; card.append(t);
+      if (state.fields.total_cop) { const v = document.createElement("div"); v.className = "val"; v.textContent = cop(state.fields.total_cop); card.append(v); }
+      c.append(card);
+    }
+    pipe.append(c);
+  });
+
+  const dl = $("fields"); dl.textContent = "";
+  for (const [k, label] of FIELD_LABELS) {
+    const dt = document.createElement("dt"); dt.textContent = label;
+    const dd = document.createElement("dd"); const v = state.fields[k];
+    if (v === undefined) { dd.className = "empty"; dd.textContent = "—"; }
+    else dd.textContent = k === "total_cop" ? cop(v) : String(v);
+    dl.append(dt, dd);
+  }
+
+  const tg = $("tags"); tg.textContent = "";
+  if (!state.tags.length) { const e = document.createElement("span"); e.className = "note"; e.textContent = "Aparecen cuando llega el primer mensaje."; tg.append(e); }
+  for (const t of state.tags) {
+    const s = document.createElement("span");
+    s.className = "tag" + (t === "humano" ? " human" : t === "lead-caliente" || t === "comprobante-enviado" ? " hot" : "");
+    s.textContent = t; tg.append(s);
+  }
+
+  const st = $("botStatus");
+  st.className = "status" + (state.human ? " human" : "");
+  st.textContent = state.human ? "Chat en manos de un asesor. El bot está en pausa." : "El bot atiende este chat.";
+  $("headStatus").textContent = state.human ? "Laura · asesora en línea" : "Asistente virtual · responde 24/7";
+
+  const lg = $("log"); lg.textContent = "";
+  if (!state.log.length) { const li = document.createElement("li"); li.innerHTML = "<time>—</time><span class=\"note\">Sin actividad todavía.</span>"; lg.append(li); }
+  for (const l of state.log) {
+    const li = document.createElement("li"); const tm = document.createElement("time"); tm.textContent = l.t;
+    const sp = document.createElement("span"); sp.textContent = l.text; li.append(tm, sp); lg.append(li);
+  }
+
+  $("btnPay").disabled = state.stage < 2 || state.stage >= 3;
+  $("btnFollow").disabled = state.stage !== 2;
+  $("btnBack").disabled = !state.human;
+  $("btnSend").disabled = busy;
+  $("asCliente").setAttribute("aria-pressed", String(sender === "cliente"));
+  $("asAsesor").setAttribute("aria-pressed", String(sender === "asesor"));
+  $("msgInput").placeholder = sender === "asesor" ? "Escribe como asesora (Laura)" : "Escribe como cliente";
+}
+
+/* ---------- team actions ---------- */
+function confirmPay() {
+  if (state.stage < 2 || state.stage >= 3) return;
+  untag("comprobante-enviado");
+  if (state.human) { state.human = false; untag("humano"); log("La asesora confirmó el pago y devolvió el chat al bot"); }
+  setStage(3, "el asesor confirmó el pago");
+  log("Workflow “Anticipo pagado”: confirmación enviada y venta registrada para Google Ads");
+  const f = state.fields;
+  addMsg("bot", `Tu reserva de ${f.tour || "tu tour"}${f.fecha ? " para el " + f.fecha : ""} está confirmada.${f.hospedaje ? " Recogida: " + f.hospedaje + "." : ""} El día anterior te enviamos hora y punto de encuentro.`);
+  setTimeout(() => addMsg("bot", "¿Quieren agregar almuerzo típico por $35.000 por persona? Responde sí y lo sumo a tu reserva."), 900);
+}
+function followUp() {
+  if (state.stage !== 2) return;
+  log("Seguimiento automático (2 h sin respuesta)");
+  addMsg("bot", `Hola${state.fields.nombre ? " " + state.fields.nombre : ""}, ¿pudiste revisar la cotización${state.fields.tour ? " de " + state.fields.tour : ""}? Si quieres, te aseguro los cupos con el anticipo.`);
+}
+function backToBot() {
+  if (!state.human) return;
+  state.human = false; untag("humano");
+  log("El asesor devolvió el chat al bot");
+  sys("El bot vuelve a atender este chat.");
+  const last = state.msgs.filter(m => m.who !== "sys").at(-1);
+  if (last && last.who === "cliente" && !demoTimer) botReply();
+}
+$("btnPay").onclick = confirmPay;
+$("btnFollow").onclick = followUp;
+$("btnBack").onclick = backToBot;
+
+/* ---------- guided demo (no AI needed) ---------- */
+const SCRIPT = [
+  () => { addMsg("cliente", "Hola, quiero información del Valle del Cocora (REF-COCORA)"); detectRef("REF-COCORA"); firstContact(); setFields({ tour: "Valle del Cocora + Salento" }); render(); },
+  () => addMsg("bot", "¡Hola! Qué bueno que quieras conocer el Valle del Cocora. ¿Para qué fecha lo tienen pensado?"),
+  () => { addMsg("cliente", "Para el sábado 14 de noviembre"); setFields({ fecha: "sábado 14 de noviembre" }); render(); },
+  () => addMsg("bot", "Perfecto. ¿Cuántas personas viajan? Si van niños, cuéntame sus edades."),
+  () => { addMsg("cliente", "Somos 2 adultos y un niño de 8 años. Me llamo Carolina"); setFields({ adultos: 2, ninos: "1 (8 años)", nombre: "Carolina" }); render(); },
+  () => addMsg("bot", "Gracias, Carolina. ¿Dónde se van a hospedar? Así te confirmo el punto de recogida."),
+  () => { addMsg("cliente", "En un hotel en Salento"); setFields({ hospedaje: "Hotel en Salento" }); setStage(1, "ya hay fecha y personas"); render(); },
+  () => { addMsg("bot", "Les recomiendo el tour Valle del Cocora + Salento: día completo, transporte desde su hotel, guía y entrada al valle.\n2 adultos × $180.000 + 1 niño × $140.000\nTotal: $500.000 COP"); setFields({ total_cop: 500000 }); setStage(2, "el bot envió la cotización"); render(); },
+  () => addMsg("bot", "¿Quieres que te asegure los cupos? Con un anticipo del 50 % ($250.000) queda reservado."),
+  () => addMsg("cliente", "Sí, de una"),
+  () => addMsg("bot", "Listo. Este es el link de pago del anticipo: pagos.ejemplo/jmtours-cocora\nCuando pagues, envíame el comprobante por aquí."),
+  () => { addMsg("cliente", "📎 comprobante-pago.jpg"); tag("comprobante-enviado"); toHuman("envió comprobante de pago"); render(); },
+  () => { addMsg("asesor", "Hola Carolina, soy Laura de JM Tours. Ya verifiqué tu pago."); },
+  () => confirmPay(),
+];
+function runDemo() {
+  reset();
+  let i = 0;
+  $("btnDemo").textContent = "Demo en curso…"; $("btnDemo").disabled = true;
+  const step = () => {
+    if (i >= SCRIPT.length) { $("btnDemo").textContent = "Ver demo guiada"; $("btnDemo").disabled = false; demoTimer = null; return; }
+    SCRIPT[i++]();
+    demoTimer = setTimeout(step, 1600);
+  };
+  step();
+}
+$("btnDemo").onclick = runDemo;
+
+function reset() {
+  if (demoTimer) { clearTimeout(demoTimer); demoTimer = null; }
+  $("btnDemo").textContent = "Ver demo guiada"; $("btnDemo").disabled = false;
+  state = fresh(); busy = false; sender = "cliente";
+  sys("Hoy");
+  render();
+}
+$("btnReset").onclick = reset;
+
+/* ---------- free test with AI ---------- */
+let accessCode = "";
+try { accessCode = localStorage.getItem("jm-demo-code") || ""; } catch (e) {}
+$("codeBox").addEventListener("submit", e => {
+  e.preventDefault();
+  accessCode = $("codeInput").value.trim();
+  try { localStorage.setItem("jm-demo-code", accessCode); } catch (e) {}
+  $("codeBox").hidden = true;
+  const last = state.msgs.filter(m => m.who !== "sys").at(-1);
+  if (last && last.who === "cliente" && !state.human) botReply();
+});
+
+const ERRORS = {
+  limite: "La conversación de prueba llegó a su límite. Toca Reiniciar para empezar otra.",
+  ocupado: "El agente está ocupado. Espera unos segundos y toca Reintentar.",
+  rechazo: "El agente no puede responder ese mensaje. Prueba con otro.",
+};
+
+async function botReply() {
+  busy = true; render();
+  try {
+    const resp = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-demo-code": accessCode },
+      body: JSON.stringify({
+        history: state.msgs.filter(m => m.who !== "sys").slice(-30).map(m => ({ who: m.who, text: m.text })),
+        fields: state.fields,
+        stage: state.stage >= 0 ? STAGES[state.stage] : "ninguna",
+        tarifario: $("tarifario").value,
+      }),
+    });
+    const r = await resp.json().catch(() => ({ error: "servicio" }));
+    busy = false;
+    if (!resp.ok) {
+      if (r.error === "codigo") { $("codeBox").hidden = false; $("codeInput").focus(); sys("Falta el código de acceso (arriba)."); }
+      else sys(ERRORS[r.error] || "El agente no pudo responder esta vez.", "retry");
+      render();
+      return;
+    }
+    setFields(r.campos);
+    const et = STAGES.indexOf(r.etapa);
+    if (et >= 1) setStage(et, et === 1 ? "ya hay fecha y personas" : "el bot envió la cotización");
+    const msgs = Array.isArray(r.mensajes) ? r.mensajes.map(String).filter(Boolean).slice(0, 3) : [];
+    if (!msgs.length) msgs.push("Te comunico con Laura, nuestra asesora, que te ayuda en unos minutos.");
+    for (const m of msgs) addMsg("bot", m);
+    if (r.pasar_a_humano) toHuman(r.motivo || "caso para asesor");
+    render();
+  } catch (e) {
+    busy = false;
+    sys("No hay conexión con el agente. Revisa internet y toca Reintentar.", "retry");
+  }
+}
+
+async function send(text) {
+  text = text.trim();
+  if (!text || busy) return;
+  if (demoTimer) { clearTimeout(demoTimer); demoTimer = null; $("btnDemo").textContent = "Ver demo guiada"; $("btnDemo").disabled = false; }
+  if (sender === "asesor") {
+    if (!state.human) { state.human = true; tag("humano"); log("Un asesor tomó el chat · el bot se pausa"); }
+    addMsg("asesor", text);
+    sender = "cliente"; render();
+    return;
+  }
+  addMsg("cliente", text);
+  detectRef(text);
+  firstContact();
+  if (/comprobante|ya pagu|transferí|pagué/i.test(text) && state.stage >= 2) tag("comprobante-enviado");
+  render();
+  if (state.human) { log("Mensaje del cliente en un chat con asesor · el bot no responde"); sys("El bot está en pausa porque el chat lo tiene la asesora.", "back"); return; }
+  await botReply();
+}
+
+$("composer").addEventListener("submit", e => { e.preventDefault(); const v = $("msgInput").value; $("msgInput").value = ""; send(v); });
+$("chips").addEventListener("click", e => { const b = e.target.closest("button[data-say]"); if (b) { sender = "cliente"; send(b.dataset.say); } });
+$("chat").addEventListener("click", e => {
+  const b = e.target.closest("button[data-action]"); if (!b || busy) return;
+  if (b.dataset.action === "back") { backToBot(); }
+  else { state.msgs.pop(); render(); botReply(); }
+});
+$("asCliente").onclick = () => { sender = "cliente"; render(); };
+$("asAsesor").onclick = () => { sender = "asesor"; render(); };
+
+loadTarifario();
+reset();
+
+</script>
