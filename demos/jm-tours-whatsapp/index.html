@@ -429,6 +429,11 @@ $("btnReset").onclick = reset;
 /* ---------- free test with AI ---------- */
 let accessCode = "";
 try { accessCode = localStorage.getItem("jm-demo-code") || ""; } catch (e) {}
+const linkCode = new URLSearchParams(location.search).get("codigo");
+if (linkCode) {
+  accessCode = linkCode;
+  try { localStorage.setItem("jm-demo-code", accessCode); } catch (e) {}
+}
 $("codeBox").addEventListener("submit", e => {
   e.preventDefault();
   accessCode = $("codeInput").value.trim();
