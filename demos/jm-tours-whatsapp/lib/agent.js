@@ -3,6 +3,10 @@ import Anthropic from "@anthropic-ai/sdk";
 const client = new Anthropic();
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+// Server-side refusal fallbacks exist for these models only (not Haiku).
+const FALLBACK = /^claude-(opus|sonnet|fable)-/.test(MODEL)
+  ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" }
+  : {};
 const MAX_TURNS = 40;
 const MAX_CHARS = 600;
 const MAX_TARIFARIO = 4000;
@@ -72,8 +76,7 @@ Escribe la siguiente respuesta de Sofía (1 a 3 mensajes cortos de WhatsApp) y l
     const response = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 4000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      ...FALLBACK,
       system: RULES,
       output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
       messages: [{ role: "user", content: prompt }],
